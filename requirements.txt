@@ -1,0 +1,26 @@
+# Django Core
+Django
+djangorestframework
+
+# Authentication
+djangorestframework-simplejwt
+
+# Database
+pymysql
+cryptography  # Required by PyMySQL for MySQL 8.0+ authentication
+
+# CORS
+django-cors-headers
+
+# Environment Variables
+python-decouple
+
+# Utilities
+Pillow
+python-dateutil
+
+# Payment Gateway
+razorpay
+
+# PDF Generation
+weasyprint
