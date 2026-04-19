@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}Customers Management - Admin{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'includes/sidebar_admin.html' %}
+{% endblock %}
+
+{% block page_title %}Customers Management{% endblock %}
+
+{% block content %}
+<!-- Stats Row -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-0">{{ stats.total }}</h3>
+                        <small>Total Customers</small>
+                    </div>
+                    <i class="bi bi-people display-5"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-0">{{ stats.with_policies }}</h3>
+                        <small>With Active Policies</small>
+                    </div>
+                    <i class="bi bi-shield-check display-5"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-0">{{ stats.with_documents }}</h3>
+                        <small>With Documents</small>
+                    </div>
+                    <i class="bi bi-file-earmark-check display-5"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-5">
+                <input type="text" name="q" class="form-control" placeholder="Search by name, email, phone..." value="{{ request.GET.q }}">
+            </div>
+            <div class="col-md-3">
+                <select name="has_policies" class="form-select">
+                    <option value="">All Customers</option>
+                    <option value="yes" {% if request.GET.has_policies == 'yes' %}selected{% endif %}>With Policies</option>
+                    <option value="no" {% if request.GET.has_policies == 'no' %}selected{% endif %}>Without Policies</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                <a href="{% url 'admin_customers' %}" class="btn btn-outline-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Customers Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Contact</th>
+                        <th>Documents</th>
+                        <th>Applications</th>
+                        <th>Policies</th>
+                        <th>Claims</th>
+                        <th>Member Since</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in customers %}
+                    <tr>
+                        <td>
+                            <strong>{{ customer.user.get_full_name|default:customer.user.email }}</strong>
+                            <br><small class="text-muted">{{ customer.user.email }}</small>
+                        </td>
+                        <td>{{ customer.phone_number|default:"-" }}</td>
+                        <td>
+                            {% if customer.pan_number or customer.aadhar_number %}
+                            <span class="badge bg-success"><i class="bi bi-check"></i> Provided</span>
+                            {% else %}
+                            <span class="badge bg-warning">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ customer.applications_count }}</td>
+                        <td>{{ customer.policies_count }}</td>
+                        <td>{{ customer.claims_count }}</td>
+                        <td>{{ customer.user.date_joined|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'admin_user_detail' customer.user.pk %}" class="btn btn-outline-primary" title="View User">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">No customers found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if is_paginated %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page=1">&laquo;</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item active"><span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

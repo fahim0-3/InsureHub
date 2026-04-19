@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}My Applications - InsureHub{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'includes/sidebar_customer.html' %}
+{% endblock %}
+
+{% block page_title %}My Applications{% endblock %}
+
+{% block topbar_right %}
+<a href="{% url 'customer_application_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus"></i> New Application
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Search Form -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" name="q" placeholder="Search by application number or type..." value="{{ request.GET.q }}">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" name="status">
+                    <option value="">All Statuses</option>
+                    <option value="DRAFT" {% if request.GET.status == 'DRAFT' %}selected{% endif %}>Draft</option>
+                    <option value="SUBMITTED" {% if request.GET.status == 'SUBMITTED' %}selected{% endif %}>Submitted</option>
+                    <option value="APPROVED" {% if request.GET.status == 'APPROVED' %}selected{% endif %}>Approved</option>
+                    <option value="REJECTED" {% if request.GET.status == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if applications %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Application #</th>
+                        <th>Insurance Type</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr>
+                        <td><strong>{{ app.application_number }}</strong></td>
+                        <td>{{ app.insurance_type.type_name }}</td>
+                        <td>
+                            <span
+                                class="badge bg-{% if app.status == 'APPROVED' %}success{% elif app.status == 'REJECTED' %}danger{% elif app.status == 'SUBMITTED' %}primary{% else %}secondary{% endif %}">
+                                {{ app.status }}
+                            </span>
+                        </td>
+                        <td>{{ app.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <a href="{% url 'customer_application_detail' app.pk %}"
+                                class="btn btn-outline-primary btn-sm">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-file-earmark-x display-1 text-muted"></i>
+            <h5 class="mt-3">No Applications Yet</h5>
+            <p class="text-muted">Start your first insurance application.</p>
+            <a href="{% url 'customer_application_create' %}" class="btn btn-primary">New Application</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

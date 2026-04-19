@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+
+{% block title %}Application {{ application.application_number }} - InsureHub{% endblock %}
+
+{% block sidebar_nav %}
+{% include 'includes/sidebar_customer.html' %}
+{% endblock %}
+
+{% block page_title %}Application Details{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-file-text"></i> {{ application.application_number }}</span>
+                <span
+                    class="badge bg-{% if application.status == 'APPROVED' %}success{% elif application.status == 'REJECTED' %}danger{% elif application.status == 'SUBMITTED' %}primary{% elif application.status == 'UNDER_REVIEW' %}warning{% else %}secondary{% endif %} fs-6">
+                    {{ application.status }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Insurance Type</label>
+                        <p class="fw-bold mb-0">{{ application.insurance_type.type_name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Coverage Amount</label>
+                        <p class="fw-bold mb-0">₹{{ application.requested_coverage_amount|floatformat:0|default:"Not specified" }}</p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Policy Tenure</label>
+                        <p class="fw-bold mb-0">{{ application.policy_tenure_months }} Months</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Created On</label>
+                        <p class="fw-bold mb-0">{{ application.created_at|date:"F d, Y H:i" }}</p>
+                    </div>
+                </div>
+
+                {% if application.submission_date %}
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Submitted On</label>
+                        <p class="fw-bold mb-0">{{ application.submission_date|date:"F d, Y H:i" }}</p>
+                    </div>
+                    {% if application.approval_date %}
+                    <div class="col-md-6">
+                        <label class="text-muted small">Approved On</label>
+                        <p class="fw-bold mb-0">{{ application.approval_date|date:"F d, Y H:i" }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if application.rejection_reason %}
+                <div class="alert alert-danger">
+                    <strong>Rejection Reason:</strong> {{ application.rejection_reason }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Documents Section -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-file-earmark"></i> Documents</span>
+                {% if application.status in 'DRAFT,SUBMITTED,UNDER_REVIEW' %}
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                    <i class="bi bi-upload"></i> Upload Document
+                </button>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div id="documentsContainer">
+                    {% if documents %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Document</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Uploaded</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for doc in documents %}
+                                <tr>
+                                    <td>
+                                        <i class="bi bi-file-earmark-pdf text-danger me-1"></i>
+                                        {{ doc.document_name }}
+                                    </td>
+                                    <td><span class="badge bg-secondary">{{ doc.document_type }}</span></td>
+                                    <td>
+                                        <span class="badge bg-{% if doc.verification_status == 'VERIFIED' %}success{% elif doc.verification_status == 'REJECTED' %}danger{% else %}warning{% endif %}">
+                                            {{ doc.verification_status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ doc.upload_date|date:"M d, Y" }}</td>
+                                    <td>
+                                        <a href="{{ doc.document_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-file-earmark display-4 text-muted"></i>
+                        <p class="text-muted mt-2 mb-0">No documents uploaded yet</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions based on status -->
+        {% if application.status == 'DRAFT' %}
+        <div class="card">
+            <div class="card-body">
+                <h5>Ready to Submit?</h5>
+                <p class="text-muted">Once you submit your application, our team will review it and generate quotes for
+                    you.</p>
+                <button id="submitBtn" class="btn btn-primary btn-lg">
+                    <i class="bi bi-send"></i> Submit Application
+                </button>
+            </div>
+        </div>
+        {% elif application.status == 'APPROVED' %}
+        <div class="card">
+            <div class="card-body">
+                <h5 class="text-success"><i class="bi bi-check-circle"></i> Application Approved!</h5>
+                <p>Your application has been approved. You can now view and accept quotes.</p>
+                <a href="{% url 'customer_quotes' %}" class="btn btn-success btn-lg">
+                    <i class="bi bi-calculator"></i> View Quotes
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-upload"></i> Upload Document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="documentType" class="form-label">Document Type *</label>
+                        <select class="form-select" id="documentType" required>
+                            <option value="">Select type...</option>
+                            <option value="ID_PROOF">ID Proof (Aadhaar/PAN/Passport)</option>
+                            <option value="ADDRESS_PROOF">Address Proof</option>
+                            <option value="INCOME_PROOF">Income Proof</option>
+                            <option value="PHOTO">Passport Photo</option>
+                            <option value="MEDICAL_REPORT">Medical Report</option>
+                            <option value="VEHICLE_RC">Vehicle RC</option>
+                            <option value="DRIVING_LICENSE">Driving License</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="documentName" class="form-label">Document Name *</label>
+                        <input type="text" class="form-control" id="documentName" placeholder="e.g., Aadhaar Card" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="documentFile" class="form-label">Select File *</label>
+                        <input type="file" class="form-control" id="documentFile" accept=".pdf,.jpg,.jpeg,.png" required>
+                        <small class="text-muted">Supported formats: PDF, JPG, PNG. Max 5MB.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="uploadBtn">
+                    <i class="bi bi-upload"></i> Upload
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> Timeline
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="d-flex mb-3">
+                        <div class="rounded-circle bg-success text-white p-2 me-3">
+                            <i class="bi bi-check"></i>
+                        </div>
+                        <div>
+                            <strong>Created</strong>
+                            <p class="text-muted small mb-0">{{ application.created_at|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+
+                    {% if application.submission_date %}
+                    <div class="d-flex mb-3">
+                        <div class="rounded-circle bg-success text-white p-2 me-3">
+                            <i class="bi bi-check"></i>
+                        </div>
+                        <div>
+                            <strong>Submitted</strong>
+                            <p class="text-muted small mb-0">{{ application.submission_date|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if application.review_start_date %}
+                    <div class="d-flex mb-3">
+                        <div class="rounded-circle bg-success text-white p-2 me-3">
+                            <i class="bi bi-check"></i>
+                        </div>
+                        <div>
+                            <strong>Under Review</strong>
+                            <p class="text-muted small mb-0">{{ application.review_start_date|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if application.approval_date %}
+                    <div class="d-flex mb-3">
+                        <div class="rounded-circle bg-success text-white p-2 me-3">
+                            <i class="bi bi-check"></i>
+                        </div>
+                        <div>
+                            <strong>Approved</strong>
+                            <p class="text-muted small mb-0">{{ application.approval_date|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <a href="{% url 'customer_applications' %}" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-arrow-left"></i> Back to Applications
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Document Upload
+    document.getElementById('uploadBtn')?.addEventListener('click', async function() {
+        const docType = document.getElementById('documentType').value;
+        const docName = document.getElementById('documentName').value;
+        const docFile = document.getElementById('documentFile').files[0];
+        
+        if (!docType || !docName || !docFile) {
+            alert('Please fill all required fields');
+            return;
+        }
+        
+        if (docFile.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('document_type', docType);
+        formData.append('document_name', docName);
+        formData.append('document_file', docFile);
+        
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Uploading...';
+        
+        try {
+            const response = await fetch('/api/v1/applications/{{ application.id }}/upload_document/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                credentials: 'include',
+                body: formData
+            });
+            
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const error = await response.json();
+                alert('Error: ' + (error.error || JSON.stringify(error)));
+            }
+        } catch (err) {
+            alert('Network error: ' + err.message);
+        } finally {
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-upload"></i> Upload';
+        }
+    });
+
+    // Submit Application
+    document.getElementById('submitBtn')?.addEventListener('click', async function() {
+        if (!confirm('Are you sure you want to submit this application? You cannot edit it after submission.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/v1/applications/{{ application.id }}/submit/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const error = await response.json();
+                alert('Error: ' + (error.error || JSON.stringify(error)));
+            }
+        } catch (err) {
+            alert('Network error: ' + err.message);
+        }
+    });
+</script>
+{% endblock %}
